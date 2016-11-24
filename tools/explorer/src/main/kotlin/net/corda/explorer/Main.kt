@@ -197,7 +197,7 @@ fun main(args: Array<String>) {
                 issuerGBPEventGenerator.bankOfCordaIssueGenerator.map { command ->
                     issuerRPCGBP.startFlow(::IssuanceRequester,
                             command.amount,
-                            command.recipient,
+                            command.recipient.resolveParty(issuerRPCGBP)!!,
                             command.issueRef,
                             issuerNodeGBP.nodeInfo.legalIdentity)
                     Unit
@@ -205,7 +205,7 @@ fun main(args: Array<String>) {
                 issuerUSDEventGenerator.bankOfCordaIssueGenerator.map { command ->
                     issuerRPCUSD.startFlow(::IssuanceRequester,
                             command.amount,
-                            command.recipient,
+                            command.recipient.resolveParty(issuerRPCUSD)!!,
                             command.issueRef,
                             issuerNodeUSD.nodeInfo.legalIdentity)
                     Unit
