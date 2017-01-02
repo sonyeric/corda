@@ -13,15 +13,20 @@ import net.corda.node.utilities.TestClock
 import java.nio.file.Path
 import java.util.*
 
+// TODO Rename to SSLConfiguration
 interface NodeSSLConfiguration {
     val keyStorePassword: String
     val trustStorePassword: String
+    // TODO Rename to certificatesDirectory
     val certificatesPath: Path
+    // TODO Rename to keyStoreFile
     val keyStorePath: Path get() = certificatesPath / "sslkeystore.jks"
+    // TODO Rename to trustStoreFile
     val trustStorePath: Path get() = certificatesPath / "truststore.jks"
 }
 
 interface NodeConfiguration : NodeSSLConfiguration {
+    // TODO Rename to baseDirectory
     val basedir: Path
     override val certificatesPath: Path get() = basedir / "certificates"
     val myLegalName: String
@@ -29,8 +34,8 @@ interface NodeConfiguration : NodeSSLConfiguration {
     val nearestCity: String
     val emailAddress: String
     val exportJMXto: String
-    val dataSourceProperties: Properties get() = Properties()
-    val rpcUsers: List<User> get() = emptyList()
+    val dataSourceProperties: Properties
+    val rpcUsers: List<User>
     val devMode: Boolean
 }
 
@@ -43,38 +48,31 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
     override val keyStorePassword: String by config
     override val trustStorePassword: String by config
     override val dataSourceProperties: Properties by config
-    override val devMode: Boolean by config.getOrElse { false }
-    override val networkMapService: NetworkMapInfo? = config.getOptionalConfig("networkMapService")?.run {
-        NetworkMapInfo(
-                HostAndPort.fromString(getString("address")),
-                getString("legalName"))
-    }
-    override val rpcUsers: List<User> = config
-            .getListOrElse<Config>("rpcUsers") { emptyList() }
-            .map {
-                val username = it.getString("user")
-                require(username.matches("\\w+".toRegex())) { "Username $username contains invalid characters" }
-                val password = it.getString("password")
-                val permissions = it.getListOrElse<String>("permissions") { emptyList() }.toSet()
-                User(username, password, permissions)
-            }
+    override val devMode: Boolean by config.orElse { false }
+    override val networkMapService: NetworkMapInfo? by config.orElse { null }
+    override val rpcUsers: List<User> by config.orElse { emptyList<User>() }
     val useHTTPS: Boolean by config
     val artemisAddress: HostAndPort by config
     val webAddress: HostAndPort by config
-    val messagingServerAddress: HostAndPort? by config.getOrElse { null }
-    val extraAdvertisedServiceIds: String by config
-    val useTestClock: Boolean by config.getOrElse { false }
-    val notaryNodeAddress: HostAndPort? by config.getOrElse { null }
-    val notaryClusterAddresses: List<HostAndPort> = config
-            .getListOrElse<String>("notaryClusterAddresses") { emptyList() }
-            .map { HostAndPort.fromString(it) }
+    val messagingServerAddress: HostAndPort? by config.orElse { null }
+    // TODO Make this Set<ServiceInfo>
+    val extraAdvertisedServiceIds: List<String> by config
+    val useTestClock: Boolean by config.orElse { false }
+    val notaryNodeAddress: HostAndPort? by config.orElse { null }
+    val notaryClusterAddresses: List<HostAndPort> by config.orElse { emptyList<HostAndPort>() }
+
+    init {
+        // TODO Move this to AretmisMessagingServer
+        rpcUsers.forEach {
+            require(it.username.matches("\\w+".toRegex())) { "Username ${it.username} contains invalid characters" }
+        }
+    }
 
     fun createNode(): Node {
         // This is a sanity feature do not remove.
         require(!useTestClock || devMode) { "Cannot use test clock outside of dev mode" }
 
         val advertisedServices = extraAdvertisedServiceIds
-                .split(",")
                 .filter(String::isNotBlank)
                 .map { ServiceInfo.parse(it) }
                 .toMutableSet()
@@ -83,5 +81,3 @@ class FullNodeConfiguration(val config: Config) : NodeConfiguration {
         return Node(this, advertisedServices, if (useTestClock) TestClock() else NodeClock())
     }
 }
-
-private fun Config.getOptionalConfig(path: String): Config? = if (hasPath(path)) getConfig(path) else null

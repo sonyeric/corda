@@ -349,7 +349,7 @@ open class DriverDSL(
                 "basedir" to baseDirectory.normalize().toString(),
                 "artemisAddress" to messagingAddress.toString(),
                 "webAddress" to apiAddress.toString(),
-                "extraAdvertisedServiceIds" to advertisedServices.joinToString(","),
+                "extraAdvertisedServiceIds" to advertisedServices.map { it.toString() },
                 "networkMapService" to mapOf(
                         "address" to networkMapAddress.toString(),
                         "legalName" to networkMapLegalName
@@ -425,7 +425,7 @@ open class DriverDSL(
                         "basedir" to baseDirectory.normalize().toString(),
                         "artemisAddress" to networkMapAddress.toString(),
                         "webAddress" to apiAddress.toString(),
-                        "extraAdvertisedServiceIds" to "",
+                        "extraAdvertisedServiceIds" to emptyList<String>(),
                         "useTestClock" to useTestClock
                 )
         )
